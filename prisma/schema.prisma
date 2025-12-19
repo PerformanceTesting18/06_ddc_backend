@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// =========== ENUMS ===========
+enum UserRole {
+  ADMIN
+  VETERINARY
+  RECEPTIONIST
+  TRAINER
+  DRIVER
+  USER
+}
+
+enum PetSize {
+  SMALL
+  MEDIUM
+  LARGE
+  GIANT
+}
+
+enum PetTemperament {
+  CALM
+  PLAYFUL
+  SHY
+  ENERGETIC
+  AGGRESSIVE
+  FRIENDLY
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// =========== MODELS ===========
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password_hash String
+  first_name    String
+  last_name     String
+  phone         String?
+  address       Json?
+  role          UserRole @default(USER)
+  is_active     Boolean  @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  sessions      Session[]
+  pets          Pet[]
+  bookings      Booking[]
+  memberships   Membership[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  user_id     String
+  token       String   @unique
+  expires     DateTime
+  device_info Json?
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Pet {
+  id            String          @id @default(cuid())
+  user_id       String
+  name          String
+  breed         String?
+  size          PetSize
+  temperament   PetTemperament?
+  date_of_birth DateTime?
+  weight        Float?
+  health_notes  String?
+  photo_url     String?
+  is_active     Boolean         @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user     User      @relation(fields: [user_id], references: [id])
+  bookings Booking[]
+
+  @@map("pets")
+}
+
+model Booking {
+  id                   String        @id @default(cuid())
+  user_id              String
+  pet_id               String
+  booking_date         DateTime
+  check_in_time        DateTime
+  check_out_time       DateTime
+  booking_type         String
+  status               BookingStatus @default(PENDING)
+  special_instructions String?
+  total_amount         Decimal
+  payment_status       PaymentStatus @default(PENDING)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id])
+  pet  Pet  @relation(fields: [pet_id], references: [id])
+
+  @@map("bookings")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  user_id    String
+  title      String
+  message    String
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Membership {
+  id       String    @id @default(cuid())
+  user_id  String
+  tier     String // BASIC, PREMIUM, VIP
+  status   String // ACTIVE, EXPIRED
+  start_at DateTime  @default(now())
+  end_at   DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("memberships")
+}
+
+// =========== Create minimal schema for Day 1 ===========
+// We'll add more models in subsequent days
